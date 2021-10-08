@@ -1,3 +1,21 @@
+"""
+IMPORTANT: READ
+
+What this file does:
+1. Checks if a data folder exists. If it doesnt moves to it.
+2. Downloads citibike data from website. Data previous to 2017 and after
+are in different formats so they are downloaded using different links.
+3. Each downloaded file is a zip file, which can not be read directly.
+Each zip file is extracted, and the zip file is removed.
+4. Program figures out what all the downloaded csv are. Of these, figure out
+which files belong to years before COVID.
+5. These files are merged into a single file. As 2013 and 2017 data are different
+some changes are made to the data. Additionally, since the headers used for 
+different years are different, the headers must be changed so that they are
+able to be combined.
+6. (Optional) Remove all the smaller csv files.
+
+"""
 import os
 import urllib.request
 import time
@@ -196,6 +214,4 @@ for file in old_files + new_files:
 all_merge(pre_covid_files, 'merge_pre_covid.csv')# Create merged file
 
 #remove_files(old_files + new_files) # Remove files after merging (optional)
-
-
 
