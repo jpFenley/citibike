@@ -129,19 +129,23 @@ def all_merge(inputs, dest_file):
     # Get all possible header values. Use col-trans to replace similarly
     # named columns
     fieldnames = []
-    for filename in inputs:
+    for filename in inputs: # Iterate through each file
         with open(filename, "r", newline="") as f_in:
             reader = csv.reader(f_in)
-            headers = next(reader)
-            for h in headers:
-                if h not in col_trans:
-                    if h not in fieldnames:
+            headers = next(reader) # Get headers
+            for h in headers: # For each header value
+                if h not in col_trans: 
+                    if h not in fieldnames: # Append  value if not seen yet
                         fieldnames.append(h)
                 else:
-                    if col_trans[h] not in fieldnames:
+                    if col_trans[h] not in fieldnames: # Append value if it has a replacement
                         fieldnames.append(col_trans[h])
+    for col in ignore_cols:
+        if col in fieldnames:
+            fieldnames.remove(col)
     print(fieldnames)
 
+    stations = {}
     # merges data
     with open(dest_file, "w", newline="") as f_out:   # Comment 2 below
         writer = csv.DictWriter(f_out, fieldnames=fieldnames)
@@ -155,15 +159,35 @@ def all_merge(inputs, dest_file):
                         if h in col_trans:
                             line[col_trans[h]] = line.pop(h)
                     if 'Birth Year' in line:
-                        if not line['Birth Year'].isdigit():
-                            line['Birth Year'] == ''
+                        if not str(line['Birth Year']).isdigit():
+                            line['Birth Year'] = ''
                     if 'Start Station ID' in line:
-                        if not line['Birth Year'].isdigit():
-                            line['Birth Year'] == -1
-                    if 'End Station ID' in line:
-                        if not line['Birth Year'].isdigit():
-                            line['Birth Year'] == -1
+                        if line['Start Station ID'] not in stations:
+                            stations[line['Start Station ID']] = {'name': line['Start Station Name'],
+                                                                    'lon': line['Start Station Longitude'],
+                                                                    'lat': line['Start Station Latitude']}
+                        if not str(line['Start Station ID']).isdigit():
+                            line['Start Station ID'] = -1
+                    if 'Stop Station ID' in line:
+                        if line['Stop Station ID'] not in stations:
+                            stations[line['End Station ID']] = {'name': line['End Station Name'],
+                                                                    'lon': line['End Station Longitude'],
+                                                                    'lat': line['End Station Latitude']}
+                        if not str(line['Stop Station ID']).isdigit():
+                            line['Stop Station ID'] = -1
+                    if 'User Type' in line:
+                        line['User Type'] = user_map[line['User Type']]
+
+                    for col in ignore_cols:
+                        if col in line:
+                            line.pop(col)
                     writer.writerow(line)
+        
+    station_df = pd.DataFrame.from_dict(stations, orient='index')
+    station_df.to_csv('stations.csv')
+
+ignore_cols = ['Start Station Name', 'End Station Name', 'Start Station Longitude', 'Start Station Latitude',
+'End Station Latitude', 'End Station Longitude']
 
 col_trans = {'tripduration': 'Trip Duration',
             'starttime': 'Start Time',
@@ -191,6 +215,8 @@ col_trans = {'tripduration': 'Trip Duration',
             'end_lat':'End Station Latitude',
             'end_lng':'End Station Longitude'}
 
+user_map = {'Customer': 0, 'Subscriber': 1, 'member': 1, 'casual': 0, '': 0}
+
 
 def remove_files(files):
     """
@@ -205,12 +231,14 @@ set_path() # Set data directory
 # download_data() # Download data: only run this once. Otherwise it will download each time.
 # unzip_items() # Unzip downloaded zip files
 old_files, new_files = get_files() # Get list of files downloaded
+#sample_files = ['201910-citibike-tripdata.csv', '2013-07 - Citi Bike trip data.csv']
 pre_covid_files = [] 
 # Create list of dates before COVID
 for file in old_files + new_files:
     if not file.startswith('2020') and not file.startswith('2021'):
         pre_covid_files.append(file)
 
+#all_merge(sample_files, 'sample_files.csv')# Create merged file
 all_merge(pre_covid_files, 'merge_pre_covid.csv')# Create merged file
 
 #remove_files(old_files + new_files) # Remove files after merging (optional)
